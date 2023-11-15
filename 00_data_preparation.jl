@@ -1,5 +1,6 @@
 import DelimitedFiles
 using SpeciesDistributionToolkit
+using CairoMakie
 
 sightings = vec(mapslices(x -> Tuple(reverse(x)), DelimitedFiles.readdlm("occurrences.csv", ','); dims=2))
 filter!(r -> 25 <= r[2] <= 55, sightings)
@@ -48,7 +49,7 @@ absence_layer = backgroundpoints(
 replace!(absence_layer, false => nothing)
 replace!(presence_layer, false => nothing)
 
-predictors = 1:19
+predictors = [SimpleSDMPredictor(provider, layer=i; opts..., boundingbox...) for i in 1:19]
 Xpresence = hcat([bioclim_var[keys(presence_layer)] for bioclim_var in predictors]...)
 ypresence = fill(true, length(presence_layer))
 Xabsence = hcat([bioclim_var[keys(absence_layer)] for bioclim_var in predictors]...)
