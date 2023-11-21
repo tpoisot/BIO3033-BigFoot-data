@@ -18,11 +18,10 @@ StatsAPI.predict(thr::Thresholder, X) = X .>= thr.cutoff
 # No transformation
 
 struct RawData <: SDMTransformer end
-train!(::Type{RawData}, args...) = nothing
-StatsAPI.predict(::Type{RawData}, X) = X
+train!(rd::RawData, args...) = nothing
+StatsAPI.predict(rd::RawData, X) = X
 
 # z-score
-
 Base.@kwdef mutable struct ZScore <: SDMTransformer
     μ::AbstractArray = zeros(1)
     σ::AbstractArray = zeros(1)
@@ -49,6 +48,7 @@ function train!(sdm::SDM, y, X; classify=true)
     X₁ = predict(sdm.transformer, X)
     train!(sdm.classifier, y, X₁)
     ŷ = predict(sdm.classifier, X₁)
+    ŷ[findall(isnan.(ŷ))] .= 0.0
     if classify
         train!(sdm.threshold, y, ŷ)
     end
@@ -73,7 +73,7 @@ y = rand(Bool, size(X, 2))
 X[:,findall(y)] .+= 0.25
 
 model = SDM(ZScore(), NBC(), Thresholder())
-train!(model)
+train!(model, y, X)
 yhat = predict(model, X; classify=false)
 ConfusionMatrix(yhat, y) |> mcc
 =#

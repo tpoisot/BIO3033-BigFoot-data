@@ -21,6 +21,10 @@ function ConfusionMatrix(pred::Vector{T}, truth::Vector{Bool}) where {T <: Numbe
     return ConfusionMatrix(pred, truth, 0.5)
 end
 
+function ConfusionMatrix(pred::BitVector, args...)
+    return ConfusionMatrix(convert(Vector{Bool}, pred), args...)
+end
+
 function Base.Matrix(c::ConfusionMatrix)
     return [c.tp c.fp; c.fn c.tn]
 end
