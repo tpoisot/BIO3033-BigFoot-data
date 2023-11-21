@@ -1,6 +1,8 @@
 import DelimitedFiles
 using SpeciesDistributionToolkit
 using CairoMakie
+using JLD2
+import Random
 
 sightings = vec(mapslices(x -> Tuple(reverse(x)), DelimitedFiles.readdlm("occurrences.csv", ','); dims=2))
 filter!(r -> 25 <= r[2] <= 55, sightings)
@@ -54,7 +56,13 @@ Xpresence = hcat([bioclim_var[keys(presence_layer)] for bioclim_var in predictor
 ypresence = fill(true, length(presence_layer))
 Xabsence = hcat([bioclim_var[keys(absence_layer)] for bioclim_var in predictors]...)
 yabsence = fill(false, length(absence_layer))
-X = vcat(Xpresence, Xabsence)
+X = permutedims(vcat(Xpresence, Xabsence))
 y = vcat(ypresence, yabsence)
 
+# Cross-validation data
 idx, tidx = holdout(y, X; permute=true)
+
+# Prepare the data
+jldsave("training.jld2"; X=X[:,idx], y=y[idx])
+jldsave("testing.jld2"; X=X[:,tidx], y=y[tidx])
+SpeciesDistributionToolkit._write_geotiff("layers.tiff", predictors)
