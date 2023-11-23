@@ -58,6 +58,11 @@ end
 function StatsAPI.predict(sdm::SDM, X; classify=true)
     X₁ = predict(sdm.transformer, X)
     ŷ = predict(sdm.classifier, X₁)
+    if length(ŷ) > 1
+        ŷ[findall(isnan.(ŷ))] .= 0.0
+    else
+        ŷ = isnan(ŷ) ? 0.0 : ŷ
+    end
     if classify
         return predict(sdm.threshold, ŷ)
     else

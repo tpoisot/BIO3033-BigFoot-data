@@ -8,3 +8,24 @@ function bootstrap(y, X; n = 50)
     end
     return bags
 end
+
+mutable struct Bagging
+    model::SDM
+    bags::Vector{Tuple{Vector{Int64}, Vector{Int64}}}
+    models::Vector{SDM}
+end
+
+function Bagging(model::SDM, bags::Vector)
+    return Bagging(model, bags, typeof(model)[])
+end
+
+function train!(ensemble::Bagging, y, X; kwargs...)
+    ensemble.models = [train!(deepcopy(ensemble.model), y, X[:,bag[1]]; kwargs...) for bag in ensemble.bags]
+    return ensemble
+end
+
+function StatsAPI.predict(ensemble::Bagging, X; consensus=median, kwargs...)
+    ŷ = [predict(component, X; kwargs...) for component in ensemble.models]
+    ỹ = vec(mapslices(consensus, hcat(ŷ...); dims=2))
+    return isone(length(ỹ)) ? only(ỹ) : ỹ
+end
