@@ -1,7 +1,7 @@
 function crossvalidate(sdm, y, X, folds, args...; kwargs...)
     Cv = zeros(ConfusionMatrix, length(folds))
     Ct = zeros(ConfusionMatrix, length(folds))
-    for (i, f) in enumerate(folds)
+    Threads.@threads for (i, f) in enumerate(folds)
         trn, val = f
         train!(sdm, y[trn], X[:,trn]; kwargs...)
         pred = predict(sdm, X[:,val]; classify=false)

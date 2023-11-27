@@ -3,6 +3,7 @@ _code_path = joinpath(dirname(Base.active_project()), "code")
 import JLD2
 import StatsAPI
 using CairoMakie
+import GeoMakie
 using Distributions
 using GLM
 using MultivariateStats
