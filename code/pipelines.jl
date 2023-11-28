@@ -43,8 +43,10 @@ mutable struct SDM
     threshold::SDMThresholder
 end
 
-function train!(sdm::SDM, y, X; classify=true)
-    train!(sdm.transformer, X)
+function train!(sdm::SDM, y, X; transform=true, classify=true)
+    if transform
+        train!(sdm.transformer, X)
+    end
     X₁ = predict(sdm.transformer, X)
     train!(sdm.classifier, y, X₁)
     ŷ = predict(sdm.classifier, X₁)
@@ -67,6 +69,14 @@ function StatsAPI.predict(sdm::SDM, X; classify=true)
         return predict(sdm.threshold, ŷ)
     else
         return ŷ
+    end
+end
+
+function iqr(x)
+    if all(isnan.(x))
+        return 0.0
+    else
+        return first(diff(quantile(filter(!isnan, x), [0.25, 0.75])))
     end
 end
 

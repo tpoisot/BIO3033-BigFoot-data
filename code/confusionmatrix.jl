@@ -25,6 +25,10 @@ function ConfusionMatrix(pred::BitVector, args...)
     return ConfusionMatrix(convert(Vector{Bool}, pred), args...)
 end
 
+function ConfusionMatrix(pred::BitVector, truth::BitVector, args...)
+    return ConfusionMatrix(convert(Vector{Bool}, pred), convert(Vector{Bool}, truth), args...)
+end
+
 function Base.Matrix(c::ConfusionMatrix)
     return [c.tp c.fp; c.fn c.tn]
 end

@@ -1,18 +1,22 @@
-function _bioclim_score(x)
-    if x > 0.5
-        return 1.0 - x
-    else
-        return x
-    end
+Base.@kwdef mutable struct BIOCLIM <: SDMClassifier
+    ecdf::Vector = [(x) -> 0.0]
 end
 
-function bioclim(y::Vector{Bool}, X::Matrix{T}) where {T <: Number}
+function train!(bc::BIOCLIM, y::Vector{Bool}, X::Matrix{T}) where {T <: Number}
     presences = findall(y)
-    obs = X[presences,:]
-    qfunc = vec(mapslices(ecdf, obs, dims=1))
-    function inner_predictor(v::Vector{TN}) where { TN <: Number }
-        qs = _bioclim_score.([qfunc[i](v[i]) for i in eachindex(v)])
-        return 2minimum(qs)
-    end
-    return inner_predictor
+    obs = X[:,presences]
+    bc.ecdf = vec(mapslices(ecdf, obs, dims=2))
+    return bc
 end
+
+
+function StatsAPI.predict(bc::BIOCLIM, x::Vector{T}) where {T <: Number}
+    s = [_bioclim_score(bc.ecdf[i](x[i])) for i in eachindex(x)]
+    return 2minimum(s)
+end
+
+function StatsAPI.predict(bc::BIOCLIM, X::Matrix{T}) where {T <: Number}
+    return vec(mapslices(x -> predict(bc, x), X; dims = 1))
+end
+
+_bioclim_score(x) = x > 0.5 ? 1.0 - x : x
