@@ -16,11 +16,13 @@ mutable struct Bagging
 end
 
 function Bagging(model::SDM, bags::Vector)
-    return Bagging(model, bags, typeof(model)[])
+    return Bagging(model, bags, [deepcopy(model) for _ in eachindex(bags)])
 end
 
 function train!(ensemble::Bagging, y, X; kwargs...)
-    ensemble.models = [train!(deepcopy(ensemble.model), y, X[:, bag[1]]; kwargs...) for bag in ensemble.bags]
+    Threads.@threads for m in eachindex(ensemble.models)
+        train!(ensemble.models[m], y, X[:,bags[m][1]]; kwargs...)
+    end
     return ensemble
 end
 
@@ -39,7 +41,7 @@ function outofbag(ensemble::Bagging, y, X, bags, args...; kwargs...)
         valid_models = findall(x -> !(instance in x[1]), bags)
         if !isempty(valid_models)
             push!(done_instances, instance)
-            pred = [predict(ensemble.models[i], X[variables, instance], args...; kwargs...) for i in valid_models]
+            pred = [predict(ensemble.models[i], X[:, instance], args...; kwargs...) for i in valid_models]
             push!(outcomes, count(pred) > count(pred) // 2)
         end
     end

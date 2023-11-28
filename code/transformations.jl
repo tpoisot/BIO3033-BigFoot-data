@@ -3,7 +3,7 @@ types_to_train = [:PCA, :PPCA, :KernelPCA, :Whitening, :MDS, :MetricMDS]
 types_with_transform = [:Whitening]
 
 Base.@kwdef mutable struct MultivariateTransform{T} <: SDMTransformer
-    trf::T = StatsAPI.fit(T, rand(Float64, (5, 5)))
+    trf::T = StatsAPI.fit(T, rand(0:10, (5, 5)))
 end
 
 for tf in types_to_train
