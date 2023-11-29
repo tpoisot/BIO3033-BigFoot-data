@@ -1,8 +1,10 @@
-function backwardselection(model, y, X, folds, perf, args...; kwargs...)
+function backwardselection(model, y, X, folds, perf, args...; verbose::Bool=true, kwargs...)
     pool = collect(axes(X, 1))
     best_perf = -Inf
     while ~isempty(pool)
-        @info "N = $(length(pool))"
+        if verbose
+            @info "N = $(length(pool))"
+        end
         scores = zeros(length(pool))
         Threads.@threads for i in eachindex(pool)
             this_pool = deleteat!(copy(pool), i)
@@ -13,18 +15,22 @@ function backwardselection(model, y, X, folds, perf, args...; kwargs...)
             best_perf = best
             deleteat!(pool, i)
         else
-            @info "Returning with $(pool) -- $(best_perf)"
+            if verbose
+                @info "Returning with $(pool) -- $(best_perf)"
+            end
             break
         end
     end
     return pool
 end
 
-function constrainedselection(model, y, X, folds, pool, perf, args...; kwargs...)
+function constrainedselection(model, y, X, folds, pool, perf, args...; verbose::Bool = true, kwargs...)
     on_top = filter(p -> !(p in pool), collect(axes(X, 1)))
     best_perf = -Inf
     while ~isempty(on_top)
-        @info "N = $(length(pool)+1)"
+        if verbose
+            @info "N = $(length(pool)+1)"
+        end
         scores = zeros(length(on_top))
         for i in eachindex(on_top)
             this_pool = push!(copy(pool), on_top[i])
@@ -36,7 +42,9 @@ function constrainedselection(model, y, X, folds, pool, perf, args...; kwargs...
             push!(pool, on_top[i])
             deleteat!(on_top, i)
         else
-            @info "Returning with $(pool) -- $(best_perf)"
+            if verbose
+                @info "Returning with $(pool) -- $(best_perf)"
+            end
             break
         end
     end
