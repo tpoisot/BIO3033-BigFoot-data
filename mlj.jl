@@ -69,7 +69,33 @@ filter!(r -> -130 <= r[1] <= -70, sightings);
 # Plot
 fig = Figure()
 ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
-surface!(ax, prediction; colormap=cgrad(vibrant[1:2]), colorrange=(0,1), shading=false)
+surface!(ax, prediction; colormap=:lapaz, colorrange=(0,1), shading=false)
+#scatter!(ax, sightings, color=:black, markersize=3)
+hidedecorations!(ax)
+hidespines!(ax)
+current_figure()
+
+# yeah booooooistrap
+using StatsBase
+bags = [sample(train, length(train); replace=true) for i in 1:40]
+Y = zeros(Float64, (length(bags), size(df2, 1)))
+Threads.@threads for i in eachindex(bags)
+    fit!(M, rows=bags[i])
+    Y[i,:] .= pdf.(predict(M, df2), true)
+end
+
+bsmedian = similar(prediction)
+bsmean = similar(prediction)
+bsvariance = similar(prediction)
+bsmean.grid[findall(!isnothing, prediction.grid)] = vec(mapslices(mean, Y; dims=1))
+bsmedian.grid[findall(!isnothing, prediction.grid)] = vec(mapslices(median, Y; dims=1))
+bsvariance.grid[findall(!isnothing, prediction.grid)] = vec(mapslices(var, Y; dims=1))
+
+bsz = (prediction - bsmean)/bsvariance
+
+fig = Figure()
+ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
+surface!(ax, prediction; colormap=:turbo, colorrange=(0,1), shading=false)
 #scatter!(ax, sightings, color=:black, markersize=3)
 hidedecorations!(ax)
 hidespines!(ax)
