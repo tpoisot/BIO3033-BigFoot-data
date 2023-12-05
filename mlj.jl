@@ -29,13 +29,17 @@ for model in models(matching(X, y))
     @info model
 end
 
-# Load a simple decision tree
-#Tree = @load DecisionTreeClassifier pkg=DecisionTree
-Tree = MLJ.@load EvoTreeClassifier pkg=EvoTrees
+# Load a few tree-based classifiers
+Classifier = MLJ.@load DecisionTreeClassifier pkg=DecisionTree
+Classifier = MLJ.@load RandomForestClassifier pkg=DecisionTree
+Classifier = MLJ.@load EvoTreeClassifier pkg=EvoTrees
 
 # Bind the data to the machine
-tree = Tree()
-M = machine(tree, X, y)
+classifier = Classifier()
+M = machine(classifier, X, y)
+
+# Evaluate
+evaluate!(M, resampling=CV(nfolds=20, shuffle=true, rng=1234), measure=[MatthewsCorrelation(), NegativePredictiveValue(), PositivePredictiveValue()])
 
 # Prepare a split
 train, test = partition(eachindex(y), 0.7)
