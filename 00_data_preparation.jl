@@ -66,3 +66,13 @@ idx, tidx = holdout(y, X; permute=true)
 jldsave("training.jld2"; X=X[:,idx], y=y[idx])
 jldsave("testing.jld2"; X=X[:,tidx], y=y[tidx])
 SpeciesDistributionToolkit._write_geotiff("layers.tiff", predictors)
+
+using Dates
+
+projection = Projection(SSP245, ACCESS_ESM1_5)
+for year in [2021, 2041, 2061, 2081]
+    span = Year(year) => Year(year + 19)
+    @info span
+    predictors = [SimpleSDMPredictor(provider, projection, layer=i; timespan=span, opts..., boundingbox...) for i in 1:19]
+    SpeciesDistributionToolkit._write_geotiff("layers-$(year+9).tiff", predictors)
+end
