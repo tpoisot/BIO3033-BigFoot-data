@@ -30,27 +30,18 @@ for model in models(matching(X, y))
 end
 
 # Load a few tree-based classifiers
-Classifier = MLJ.@load DecisionTreeClassifier pkg=DecisionTree
+#Classifier = MLJ.@load DecisionTreeClassifier pkg=DecisionTree
 Classifier = MLJ.@load RandomForestClassifier pkg=DecisionTree
-Classifier = MLJ.@load EvoTreeClassifier pkg=EvoTrees
+#Classifier = MLJ.@load EvoTreeClassifier pkg=EvoTrees
 
 # Bind the data to the machine
 classifier = Classifier()
 M = machine(classifier, X, y)
 
 # Evaluate
-evaluate!(M, resampling=CV(nfolds=20, shuffle=true, rng=1234), measure=[MatthewsCorrelation(), NegativePredictiveValue(), PositivePredictiveValue()])
+evaluate!(M, resampling=CV(nfolds=10, shuffle=true, rng=1234), measure=[MatthewsCorrelation(), NegativePredictiveValue(), PositivePredictiveValue()])
 
-# Prepare a split
-train, test = partition(eachindex(y), 0.7)
-
-# Fit on the training data
-fit!(M, rows=train)
-
-yhat = predict(M, X[test,:])
-log_loss(yhat, y[test])
-
-broadcast(pdf, yhat, true)
+fit!(M)
 
 # Load the data
 layers = [SpeciesDistributionToolkit._read_geotiff("layers.tiff", SimpleSDMPredictor; bandnumber=v) for v in 1:19]
@@ -74,13 +65,13 @@ filter!(r -> -130 <= r[1] <= -70, sightings);
 fig = Figure()
 ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
 surface!(ax, prediction; colormap=:lapaz, colorrange=(0,1), shading=false)
-#scatter!(ax, sightings, color=:black, markersize=3)
+scatter!(ax, sightings, color=:orange, markersize=3)
 hidedecorations!(ax)
 hidespines!(ax)
 current_figure()
 
-# yeah booooooistrap
 #=
+# yeah booooooistrap
 using StatsBase
 bags = [sample(train, length(train); replace=true) for i in 1:40]
 Y = zeros(Float64, (length(bags), size(df2, 1)))
@@ -100,15 +91,15 @@ bsz = (prediction - bsmean)/bsvariance
 
 fig = Figure()
 ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
-surface!(ax, prediction; colormap=:turbo, colorrange=(0,1), shading=false)
-#scatter!(ax, sightings, color=:black, markersize=3)
+surface!(ax, bsvariance; colormap=:lapaz, colorrange=(0,1), shading=false)
+scatter!(ax, sightings, color=:orange, markersize=3)
 hidedecorations!(ax)
 hidespines!(ax)
 current_figure()
 =#
 
 # Future
-layers_future = [SpeciesDistributionToolkit._read_geotiff("layers-2070.tiff", SimpleSDMPredictor; bandnumber=v) for v in 1:19]
+layers_future = [SpeciesDistributionToolkit._read_geotiff("layers-2090.tiff", SimpleSDMPredictor; bandnumber=v) for v in 1:19]
 future_prediction = similar(layers_future[1])
 D = zeros(Float32, (length(layers_future), length(layers_future[1])))
 Threads.@threads for i in eachindex(layers_future)
@@ -123,7 +114,16 @@ future_prediction.grid[findall(!isnothing, future_prediction.grid)] = pdf.(yhat,
 fig = Figure()
 ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
 surface!(ax, future_prediction; colormap=:lapaz, colorrange=(0,1), shading=false)
-#scatter!(ax, sightings, color=:black, markersize=3)
+scatter!(ax, sightings, color=:orange, markersize=3)
 hidedecorations!(ax)
 hidespines!(ax)
 current_figure()
+
+# 
+prediction.left = future_prediction.left
+prediction.right = future_prediction.right
+prediction.bottom = future_prediction.bottom
+prediction.top = future_prediction.top
+
+
+heatmap(future_prediction - prediction, colormap=:Spectral, colorrange=(-0.5, 0.5))
