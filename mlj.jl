@@ -31,7 +31,7 @@ end
 
 # Load a simple decision tree
 #Tree = @load DecisionTreeClassifier pkg=DecisionTree
-Tree = @load EvoTreeClassifier pkg=EvoTrees
+Tree = MLJ.@load EvoTreeClassifier pkg=EvoTrees
 
 # Bind the data to the machine
 tree = Tree()
@@ -76,6 +76,7 @@ hidespines!(ax)
 current_figure()
 
 # yeah booooooistrap
+#=
 using StatsBase
 bags = [sample(train, length(train); replace=true) for i in 1:40]
 Y = zeros(Float64, (length(bags), size(df2, 1)))
@@ -96,6 +97,28 @@ bsz = (prediction - bsmean)/bsvariance
 fig = Figure()
 ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
 surface!(ax, prediction; colormap=:turbo, colorrange=(0,1), shading=false)
+#scatter!(ax, sightings, color=:black, markersize=3)
+hidedecorations!(ax)
+hidespines!(ax)
+current_figure()
+=#
+
+# Future
+layers_future = [SpeciesDistributionToolkit._read_geotiff("layers-2070.tiff", SimpleSDMPredictor; bandnumber=v) for v in 1:19]
+future_prediction = similar(layers_future[1])
+D = zeros(Float32, (length(layers_future), length(layers_future[1])))
+Threads.@threads for i in eachindex(layers_future)
+    D[i,:] = values(layers_future[i])
+end
+
+# Predict
+df2 = DataFrame(D', "BIO".*string.(1:19))
+yhat = predict(M, df2)
+future_prediction.grid[findall(!isnothing, future_prediction.grid)] = pdf.(yhat, true)
+
+fig = Figure()
+ax = GeoMakie.GeoAxis(fig[1,1]; dest = "+proj=aea +lat_1=0.0 +lat_2=55.0", coastlines=true, lonlims=extrema(longitudes(prediction)), latlims=extrema(latitudes(prediction)))
+surface!(ax, future_prediction; colormap=:lapaz, colorrange=(0,1), shading=false)
 #scatter!(ax, sightings, color=:black, markersize=3)
 hidedecorations!(ax)
 hidespines!(ax)
